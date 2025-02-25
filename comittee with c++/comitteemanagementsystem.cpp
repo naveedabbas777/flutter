@@ -78,7 +78,7 @@ int main() {
         cout << "Enter your choice: ";
         cin >> choice;
 
-        if (choice == 1) {A
+        if (choice == 1) {
             string name;
             double contribution;
             cout << "Enter member name: ";
