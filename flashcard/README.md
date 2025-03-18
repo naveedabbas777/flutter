@@ -1,4 +1,4 @@
-# flashcard
+# flash
 
 A new Flutter project.
 
