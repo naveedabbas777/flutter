@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'db/flashcard_database.dart';
+import 'models/flashcard.dart';
 
 void main() {
   runApp(const FlashcardApp());
@@ -21,52 +23,33 @@ class FlashcardScreen extends StatefulWidget {
   const FlashcardScreen({super.key});
 
   @override
-  FlashcardScreenState createState() => FlashcardScreenState();
+  State<FlashcardScreen> createState() => _FlashcardScreenState();
 }
 
-class FlashcardScreenState extends State<FlashcardScreen> {
-  // List of flashcards (you can add more)
-  final List<Flashcard> _flashcards = [
-    Flashcard(
-      question: 'What is Flutter?',
-      answer: 'A UI toolkit for building natively compiled applications.',
-    ),
-    Flashcard(
-      question: 'What is Dart?',
-      answer: 'The programming language used by Flutter.',
-    ),
-    Flashcard(
-      question: 'What is a Widget?',
-      answer: 'The basic building block of a Flutter UI.',
-    ),
-    Flashcard(
-      question: 'What is Hot Reload?',
-      answer:
-          'A feature that allows you to see the changes you make to your code in real time.',
-    ),
-    Flashcard(
-      question: 'What is a Stateful Widget?',
-      answer: 'A widget that can change its state.',
-    ),
-    Flashcard(
-      question: 'What is a Stateless Widget?',
-      answer: 'A widget that cannot change its state.',
-    ),
-  ];
-
+class _FlashcardScreenState extends State<FlashcardScreen> {
+  List<Flashcard> _flashcards = [];
   int _currentIndex = 0;
   bool _isFlipped = false;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadFlashcards();
+  }
+
+  Future<void> _loadFlashcards() async {
+    final cards = await FlashcardDatabase.instance.readAll();
+    setState(() => _flashcards = cards);
+  }
+
   void _flipCard() {
-    setState(() {
-      _isFlipped = !_isFlipped;
-    });
+    setState(() => _isFlipped = !_isFlipped);
   }
 
   void _nextCard() {
     setState(() {
       _currentIndex = (_currentIndex + 1) % _flashcards.length;
-      _isFlipped = false; // Reset flip state when moving to a new card
+      _isFlipped = false;
     });
   }
 
@@ -74,84 +57,117 @@ class FlashcardScreenState extends State<FlashcardScreen> {
     setState(() {
       _currentIndex =
           (_currentIndex - 1 + _flashcards.length) % _flashcards.length;
-      _isFlipped = false; // Reset flip state when moving to a new card
+      _isFlipped = false;
     });
+  }
+
+  Future<void> _addFlashcard(String question, String answer) async {
+    final flashcard = Flashcard(question: question, answer: answer);
+    await FlashcardDatabase.instance.create(flashcard);
+    _loadFlashcards();
+  }
+
+  Future<void> _deleteFlashcard(int id) async {
+    await FlashcardDatabase.instance.delete(id);
+    _loadFlashcards();
+  }
+
+  void _showAddDialog() {
+    final questionController = TextEditingController();
+    final answerController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: const Text('Add Flashcard'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: questionController,
+                  decoration: const InputDecoration(labelText: 'Question'),
+                ),
+                TextField(
+                  controller: answerController,
+                  decoration: const InputDecoration(labelText: 'Answer'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  _addFlashcard(questionController.text, answerController.text);
+                  Navigator.pop(context);
+                },
+                child: const Text('Add'),
+              ),
+            ],
+          ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final currentCard = _flashcards.isEmpty ? null : _flashcards[_currentIndex];
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Flashcard App')),
+      appBar: AppBar(
+        title: const Text('Flashcard App'),
+        actions: [
+          IconButton(icon: const Icon(Icons.add), onPressed: _showAddDialog),
+          if (currentCard != null)
+            IconButton(
+              icon: const Icon(Icons.delete),
+              onPressed: () => _deleteFlashcard(currentCard.id!),
+            ),
+        ],
+      ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            GestureDetector(
-              onTap: _flipCard,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 500),
-                transitionBuilder: (Widget child, Animation<double> animation) {
-                  final rotate = Tween(begin: 0.0, end: 1.0).animate(animation);
-                  return AnimatedBuilder(
-                    animation: rotate,
-                    builder: (context, child) {
-                      final isFront =
-                          child?.key ==
-                          ValueKey(
-                            '${_flashcards[_currentIndex].question}-front',
-                          );
-                      var tilt = (animation.value - 0.5).abs() * 0.5;
-                      tilt *= isFront ? -1.0 : 1.0;
-                      final transform = Matrix4.rotationY(3.14 * rotate.value);
-                      return Transform(
-                        transform: transform,
-                        alignment: Alignment.center,
-                        child: child,
-                      );
-                    },
-                    child: child,
-                  );
-                },
-                child:
-                    _isFlipped
-                        ? FlashcardView(
-                          key: ValueKey(
-                            '${_flashcards[_currentIndex].question}-back',
-                          ), // Unique key for each flashcard's back
-                          text: _flashcards[_currentIndex].answer,
-                        )
-                        : FlashcardView(
-                          key: ValueKey(
-                            '${_flashcards[_currentIndex].question}-front',
-                          ), // Unique key for each flashcard's front
-                          text: _flashcards[_currentIndex].question,
+        child:
+            _flashcards.isEmpty
+                ? const Text('No flashcards. Add some!')
+                : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    GestureDetector(
+                      onTap: _flipCard,
+                      child: FlashcardView(
+                        key: ValueKey(
+                          _isFlipped
+                              ? 'back-${currentCard!.id}'
+                              : 'front-${currentCard!.id}',
                         ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                ElevatedButton(
-                  onPressed: _previousCard,
-                  child: const Text('Previous'),
+                        text:
+                            _isFlipped
+                                ? currentCard!.answer
+                                : currentCard!.question,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        ElevatedButton(
+                          onPressed: _previousCard,
+                          child: const Text('Previous'),
+                        ),
+                        const SizedBox(width: 20),
+                        ElevatedButton(
+                          onPressed: _nextCard,
+                          child: const Text('Next'),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 20),
-                ElevatedButton(onPressed: _nextCard, child: const Text('Next')),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }
-}
-
-class Flashcard {
-  final String question;
-  final String answer;
-
-  Flashcard({required this.question, required this.answer});
 }
 
 class FlashcardView extends StatelessWidget {
