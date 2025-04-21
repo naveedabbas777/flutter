@@ -30,8 +30,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  sqflite: ^2.3.0
-  path: ^1.8.3
+  math_expressions: ^2.2.0                 # For expression evaluation
+  sqflite: ^2.3.2+1                        # SQLite support
+  path_provider: ^2.1.2                   # Required by sqflite
+  path: ^1.9.0                            # For database path construction
+  fl_chart: ^0.66.0                       # To plot graph for currency fluctuation
+  http: ^0.13.6                           # To call currency exchange API
+  intl: ^0.18.1                           # For date/time and formatting
+
 
 
   # The following adds the Cupertino Icons font to your application.
