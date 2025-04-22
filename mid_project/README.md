@@ -1,8 +1,17 @@
 # mid_project
 
-A new Flutter project.
+A new Flutter projecct of multiplacation game
 
 ## Getting Started
+
+
+
+
+## Description:
+This game is made to provide users a new experince learnig with fun, it provides gaming functionality and with reward system,users get rewarded on each correct game solving 
+
+# Requirements: 
+Thre should be an android application where users learn with fun ,So I came with idea of this app thats why building this app for provide learning with fun and learning math with easy interface where users interacts with aand provide soothing environment.
 
 This project is a starting point for a Flutter application.
 <img src="images/main.jfif">
