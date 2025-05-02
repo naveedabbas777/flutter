@@ -1,76 +1,65 @@
 import 'package:flutter/material.dart';
-import 'training_screen.dart';
-import 'learn_table_screen.dart';
-import 'test_screen.dart';
-import 'puzzle_screen.dart';
+import 'study/study_screen.dart';
+import 'training/training_screen.dart';
+import 'test/test_screen.dart';
+import 'history/history_screen.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final List<Map<String, dynamic>> modules = [
+    {'title': 'Study Mode', 'screen': StudyScreen()},
+    {'title': 'Training', 'screen': TrainingScreen()},
+    {'title': 'Start Test', 'screen': TestScreen()},
+    {'title': 'Progress History', 'screen': HistoryScreen()},
+  ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Multiplication Learning App")),
-      body: GridView.count(
-        crossAxisCount: 2,
+      appBar: AppBar(title: Text('Multiplication Learning App')),
+      body: ListView.builder(
         padding: const EdgeInsets.all(16),
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        children: [
-          _buildTile(context, "Training", Icons.school, const TrainingScreen()),
-          _buildTile(
-            context,
-            "Learn Table",
-            Icons.table_chart,
-            const LearnTableScreen(),
-          ),
-          _buildTile(
-            context,
-            "Start Test",
-            Icons.play_circle,
-            const TestScreen(),
-          ),
-          _buildTile(context, "Puzzles", Icons.extension, const PuzzleScreen()),
-        ],
+        itemCount: modules.length,
+        itemBuilder: (context, index) {
+          return AnimatedButton(
+            title: modules[index]['title'],
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => modules[index]['screen']),
+              );
+            },
+          );
+        },
       ),
     );
   }
+}
 
-  Widget _buildTile(
-    BuildContext context,
-    String title,
-    IconData icon,
-    Widget screen,
-  ) {
+class AnimatedButton extends StatelessWidget {
+  final String title;
+  final VoidCallback onTap;
+
+  const AnimatedButton({required this.title, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
-      onTap:
-          () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => screen),
-          ),
+      onTap: onTap,
       child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.deepPurple[100],
+          color: Colors.deepPurpleAccent,
           borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 6)],
         ),
         child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 48, color: Colors.deepPurple),
-              const SizedBox(height: 10),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+          child: Text(
+            title,
+            style: TextStyle(color: Colors.white, fontSize: 20),
           ),
         ),
       ),
     );
   }
 }
-`
