@@ -15,6 +15,7 @@ class BMICalculator extends StatefulWidget {
 }
 
 class _BMICalculatorState extends State<BMICalculator> {
+  // here is the use of ternary operator
   Gender? selectedGender;
   double height = 147;
   int weight = 60;
