@@ -8,11 +8,11 @@ class GenderCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const GenderCard({
-    super.key,
     required this.icon,
     required this.label,
     required this.isSelected,
     required this.onTap,
+    super.key,
   });
 
   @override
@@ -21,7 +21,7 @@ class GenderCard extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: CardSection(
-          color: isSelected ? Colors.red : const Color(0xFF1D1E33),
+          color: isSelected ? const Color(0xFF1D1E77) : const Color(0xFF1D1E33),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

@@ -8,11 +8,11 @@ class ValueCard extends StatelessWidget {
   final VoidCallback onDecrement;
 
   const ValueCard({
-    super.key,
     required this.label,
     required this.value,
     required this.onIncrement,
     required this.onDecrement,
+    super.key,
   });
 
   @override
@@ -30,19 +30,23 @@ class ValueCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                GestureDetector(
-                  onTap: onDecrement,
-                  child: CircleAvatar(
+                IconButton(
+                  onPressed: onDecrement,
+                  icon: const Icon(Icons.remove),
+                  color: Colors.white,
+                  style: IconButton.styleFrom(
                     backgroundColor: Colors.grey[800],
-                    child: const Icon(Icons.remove, color: Colors.white),
+                    fixedSize: const Size(40, 40),
                   ),
                 ),
                 const SizedBox(width: 10),
-                GestureDetector(
-                  onTap: onIncrement,
-                  child: CircleAvatar(
+                IconButton(
+                  onPressed: onIncrement,
+                  icon: const Icon(Icons.add),
+                  color: Colors.white,
+                  style: IconButton.styleFrom(
                     backgroundColor: Colors.grey[800],
-                    child: const Icon(Icons.add, color: Colors.white),
+                    fixedSize: const Size(40, 40),
                   ),
                 ),
               ],

@@ -5,9 +5,9 @@ class CardSection extends StatelessWidget {
   final Color color;
 
   const CardSection({
-    super.key,
     required this.child,
     this.color = const Color(0xFF1D1E33),
+    super.key,
   });
 
   @override
