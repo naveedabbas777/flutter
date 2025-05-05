@@ -3,6 +3,8 @@ import 'gender_card.dart';
 import 'value_card.dart';
 import 'card_section.dart';
 
+enum Gender { male, female }
+
 void main() => runApp(const BMICalculator());
 
 class BMICalculator extends StatefulWidget {
@@ -13,12 +15,12 @@ class BMICalculator extends StatefulWidget {
 }
 
 class _BMICalculatorState extends State<BMICalculator> {
-  String selectedGender = '';
+  Gender? selectedGender;
   double height = 147;
   int weight = 60;
   int age = 20;
 
-  void updateGender(String gender) {
+  void updateGender(Gender gender) {
     setState(() {
       selectedGender = gender;
     });
@@ -51,14 +53,14 @@ class _BMICalculatorState extends State<BMICalculator> {
                     GenderCard(
                       icon: Icons.male,
                       label: 'MALE',
-                      isSelected: selectedGender == 'MALE',
-                      onTap: () => updateGender('MALE'),
+                      isSelected: selectedGender == Gender.male,
+                      onTap: () => updateGender(Gender.male),
                     ),
                     GenderCard(
                       icon: Icons.female,
                       label: 'FEMALE',
-                      isSelected: selectedGender == 'FEMALE',
-                      onTap: () => updateGender('FEMALE'),
+                      isSelected: selectedGender == Gender.female,
+                      onTap: () => updateGender(Gender.female),
                     ),
                   ],
                 ),
