@@ -99,6 +99,7 @@ class GenderCard extends StatelessWidget {
   }
 }
 
+// this gives the value and label of the age and weight
 class ValueCard extends StatelessWidget {
   final String label;
   final int value;
