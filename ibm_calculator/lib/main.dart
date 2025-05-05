@@ -1,15 +1,46 @@
 import 'package:flutter/material.dart';
+import 'gender_card.dart';
+import 'value_card.dart';
+import 'card_section.dart';
 
 void main() => runApp(const BMICalculator());
 
-class BMICalculator extends StatelessWidget {
+class BMICalculator extends StatefulWidget {
   const BMICalculator({super.key});
+
+  @override
+  State<BMICalculator> createState() => _BMICalculatorState();
+}
+
+class _BMICalculatorState extends State<BMICalculator> {
+  String selectedGender = '';
+  double height = 147;
+  int weight = 60;
+  int age = 20;
+
+  void updateGender(String gender) {
+    setState(() {
+      selectedGender = gender;
+    });
+  }
+
+  void updateWeight(bool increment) {
+    setState(() {
+      weight += increment ? 1 : -1;
+    });
+  }
+
+  void updateAge(bool increment) {
+    setState(() {
+      age += increment ? 1 : -1;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(title: Text("BMI Calculator")),
+        appBar: AppBar(title: const Text("BMI Calculator")),
         backgroundColor: Colors.black,
         body: SafeArea(
           child: Column(
@@ -17,8 +48,18 @@ class BMICalculator extends StatelessWidget {
               Expanded(
                 child: Row(
                   children: [
-                    GenderCard(icon: Icons.male, label: 'MALE'),
-                    GenderCard(icon: Icons.female, label: 'FEMALE'),
+                    GenderCard(
+                      icon: Icons.male,
+                      label: 'MALE',
+                      isSelected: selectedGender == 'MALE',
+                      onTap: () => updateGender('MALE'),
+                    ),
+                    GenderCard(
+                      icon: Icons.female,
+                      label: 'FEMALE',
+                      isSelected: selectedGender == 'FEMALE',
+                      onTap: () => updateGender('FEMALE'),
+                    ),
                   ],
                 ),
               ),
@@ -27,22 +68,25 @@ class BMICalculator extends StatelessWidget {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text("HEIGHT", style: TextStyle(color: Colors.white)),
+                      const Text(
+                        "HEIGHT",
+                        style: TextStyle(color: Colors.white),
+                      ),
                       Text(
-                        "147 cm",
-                        style: TextStyle(
+                        "${height.round()} cm",
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 30,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       Slider(
-                        value: 147.0,
+                        value: height,
                         min: 100.0,
                         max: 220.0,
                         divisions: 120,
-                        label: '147 cm',
-                        onChanged: (val) {},
+                        label: '${height.round()} cm',
+                        onChanged: (val) => setState(() => height = val),
                         activeColor: Colors.red,
                       ),
                     ],
@@ -52,8 +96,18 @@ class BMICalculator extends StatelessWidget {
               Expanded(
                 child: Row(
                   children: [
-                    ValueCard(label: "WEIGHT", value: 60),
-                    ValueCard(label: "AGE", value: 20),
+                    ValueCard(
+                      label: "WEIGHT",
+                      value: weight,
+                      onIncrement: () => updateWeight(true),
+                      onDecrement: () => updateWeight(false),
+                    ),
+                    ValueCard(
+                      label: "AGE",
+                      value: age,
+                      onIncrement: () => updateAge(true),
+                      onDecrement: () => updateAge(false),
+                    ),
                   ],
                 ),
               ),
@@ -61,7 +115,7 @@ class BMICalculator extends StatelessWidget {
                 color: Colors.red,
                 height: 60,
                 width: double.infinity,
-                child: Center(
+                child: const Center(
                   child: Text(
                     "CALCULATE",
                     style: TextStyle(color: Colors.white),
@@ -72,84 +126,6 @@ class BMICalculator extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class GenderCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-
-  const GenderCard({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: CardSection(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 60, color: Colors.white),
-            SizedBox(height: 10),
-            Text(label, style: TextStyle(color: Colors.white)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// this gives the value and label of the age and weight
-class ValueCard extends StatelessWidget {
-  final String label;
-  final int value;
-
-  const ValueCard({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: CardSection(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(label, style: TextStyle(color: Colors.white)),
-            Text('$value', style: TextStyle(color: Colors.white, fontSize: 30)),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircleAvatar(
-                  backgroundColor: Colors.grey[800],
-                  child: Icon(Icons.remove, color: Colors.white),
-                ),
-                SizedBox(width: 10),
-                CircleAvatar(
-                  backgroundColor: Colors.grey[800],
-                  child: Icon(Icons.add, color: Colors.white),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class CardSection extends StatelessWidget {
-  final Widget child;
-
-  const CardSection({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Color(0xFF1D1E33),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: child,
     );
   }
 }
