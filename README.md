@@ -1,2 +1,2 @@
 # flutter
-it is for mobile application development subject
+it is for mobile application development with basic flutter 
