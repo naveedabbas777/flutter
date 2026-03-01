@@ -2,6 +2,10 @@
 
 A new Flutter project.
 
+## App Intro
+
+This app is a Body Mass Index (BMI) calculator. It helps users estimate their BMI by entering height and weight, then shows the BMI value with a basic health category (Underweight, Normal, or Overweight).
+
 ## Getting Started
 
 This project is a starting point for a Flutter application.

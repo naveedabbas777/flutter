@@ -27,6 +27,14 @@ class _InputScreenState extends State<InputScreen> {
       body: SafeArea(
         child: Column(
           children: [
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Text(
+                "This app is a Body Mass Index (BMI) calculator. Enter your height and weight to estimate your BMI category.",
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+            ),
             Expanded(
               child: Row(
                 children: [
