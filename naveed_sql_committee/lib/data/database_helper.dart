@@ -1,82 +1,84 @@
-import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
-import 'package:sqflite/sqflite.dart';
-import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DatabaseHelper {
   DatabaseHelper._internal();
 
   static final DatabaseHelper instance = DatabaseHelper._internal();
-  static Database? _database;
+  static const String _clientsKey = 'db_clients';
+  static const String _committeesKey = 'db_committees';
+  static const String _membersKey = 'db_members';
+  static const String _paymentsKey = 'db_payments';
 
-  Future<Database> get database async {
-    if (_database != null) {
-      return _database!;
+  Future<SharedPreferences> get _preferences async {
+    return SharedPreferences.getInstance();
+  }
+
+  Future<List<Map<String, Object?>>> _readTable(String key) async {
+    final preferences = await _preferences;
+    final rawJson = preferences.getString(key);
+    if (rawJson == null || rawJson.isEmpty) {
+      return [];
     }
-    _database = await _initDatabase();
-    return _database!;
+
+    final decoded = jsonDecode(rawJson);
+    if (decoded is! List) {
+      return [];
+    }
+
+    return decoded
+        .whereType<Map>()
+        .map(
+          (item) => item.map(
+            (entryKey, value) => MapEntry(entryKey.toString(), value),
+          ),
+        )
+        .toList();
   }
 
-  Future<Database> _initDatabase() async {
-    final dbFactory = kIsWeb ? databaseFactoryFfiWeb : databaseFactory;
-    final path = kIsWeb
-        ? 'committee_management.db'
-        : p.join(await getDatabasesPath(), 'committee_management.db');
-
-    return dbFactory.openDatabase(
-      path,
-      options: OpenDatabaseOptions(
-        version: 1,
-        onConfigure: (db) async {
-          await db.execute('PRAGMA foreign_keys = ON');
-        },
-        onCreate: _onCreate,
-      ),
-    );
+  Future<void> _writeTable(String key, List<Map<String, Object?>> rows) async {
+    final preferences = await _preferences;
+    await preferences.setString(key, jsonEncode(rows));
   }
 
-  Future<void> _onCreate(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE clients (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        phone TEXT,
-        company TEXT,
-        created_at TEXT NOT NULL
-      )
-    ''');
+  int _nextId(List<Map<String, Object?>> rows) {
+    var maxId = 0;
+    for (final row in rows) {
+      final value = row['id'];
+      final id = value is int ? value : int.tryParse(value.toString()) ?? 0;
+      if (id > maxId) {
+        maxId = id;
+      }
+    }
+    return maxId + 1;
+  }
 
-    await db.execute('''
-      CREATE TABLE committees (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        client_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        description TEXT,
-        status TEXT NOT NULL,
-        start_date TEXT,
-        end_date TEXT,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
-      )
-    ''');
+  double _toDouble(Object? value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
 
-    await db.execute('''
-      CREATE TABLE committee_members (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        committee_id INTEGER NOT NULL,
-        name TEXT NOT NULL,
-        role TEXT,
-        phone TEXT,
-        email TEXT,
-        joined_at TEXT,
-        FOREIGN KEY (committee_id) REFERENCES committees(id) ON DELETE CASCADE
-      )
-    ''');
+  Future<List<Map<String, Object?>>> getAllCommittees() async {
+    final committees = await _readTable(_committeesKey);
+    committees.sort((a, b) => (b['id'] as int).compareTo(a['id'] as int));
+    return committees;
+  }
+
+  Future<List<Map<String, Object?>>> getAllMembers() async {
+    return _readTable(_membersKey);
+  }
+
+  Future<List<Map<String, Object?>>> getAllPayments() async {
+    return _readTable(_paymentsKey);
   }
 
   Future<List<Map<String, Object?>>> getClients() async {
-    final db = await database;
-    return db.query('clients', orderBy: 'id DESC');
+    final clients = await _readTable(_clientsKey);
+    clients.sort((a, b) => (b['id'] as int).compareTo(a['id'] as int));
+    return clients;
   }
 
   Future<int> insertClient({
@@ -84,13 +86,17 @@ class DatabaseHelper {
     required String phone,
     required String company,
   }) async {
-    final db = await database;
-    return db.insert('clients', {
+    final clients = await _readTable(_clientsKey);
+    final id = _nextId(clients);
+    clients.add({
+      'id': id,
       'name': name,
       'phone': phone,
       'company': company,
       'created_at': DateTime.now().toIso8601String(),
     });
+    await _writeTable(_clientsKey, clients);
+    return id;
   }
 
   Future<int> updateClient({
@@ -99,32 +105,60 @@ class DatabaseHelper {
     required String phone,
     required String company,
   }) async {
-    final db = await database;
-    return db.update(
-      'clients',
-      {
-        'name': name,
-        'phone': phone,
-        'company': company,
-      },
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final clients = await _readTable(_clientsKey);
+    final index = clients.indexWhere((row) => row['id'] == id);
+    if (index == -1) {
+      return 0;
+    }
+
+    clients[index] = {
+      ...clients[index],
+      'name': name,
+      'phone': phone,
+      'company': company,
+    };
+    await _writeTable(_clientsKey, clients);
+    return 1;
   }
 
   Future<int> deleteClient(int id) async {
-    final db = await database;
-    return db.delete('clients', where: 'id = ?', whereArgs: [id]);
+    final clients = await _readTable(_clientsKey);
+    final beforeClientsLength = clients.length;
+    clients.removeWhere((row) => row['id'] == id);
+    await _writeTable(_clientsKey, clients);
+
+    final committees = await _readTable(_committeesKey);
+    final deletedCommitteeIds =
+        committees
+            .where((row) => row['client_id'] == id)
+            .map((row) => row['id'] as int)
+            .toSet();
+    committees.removeWhere((row) => row['client_id'] == id);
+    await _writeTable(_committeesKey, committees);
+
+    if (deletedCommitteeIds.isNotEmpty) {
+      final members = await _readTable(_membersKey);
+      members.removeWhere(
+        (row) => deletedCommitteeIds.contains(row['committee_id']),
+      );
+      await _writeTable(_membersKey, members);
+
+      final payments = await _readTable(_paymentsKey);
+      payments.removeWhere(
+        (row) => deletedCommitteeIds.contains(row['committee_id']),
+      );
+      await _writeTable(_paymentsKey, payments);
+    }
+
+    return beforeClientsLength - clients.length;
   }
 
   Future<List<Map<String, Object?>>> getCommitteesByClient(int clientId) async {
-    final db = await database;
-    return db.query(
-      'committees',
-      where: 'client_id = ?',
-      whereArgs: [clientId],
-      orderBy: 'id DESC',
-    );
+    final committees = await _readTable(_committeesKey);
+    final filtered =
+        committees.where((row) => row['client_id'] == clientId).toList();
+    filtered.sort((a, b) => (b['id'] as int).compareTo(a['id'] as int));
+    return filtered;
   }
 
   Future<int> insertCommittee({
@@ -134,17 +168,23 @@ class DatabaseHelper {
     required String status,
     String? startDate,
     String? endDate,
+    double? totalBudget,
   }) async {
-    final db = await database;
-    return db.insert('committees', {
+    final committees = await _readTable(_committeesKey);
+    final id = _nextId(committees);
+    committees.add({
+      'id': id,
       'client_id': clientId,
       'name': name,
       'description': description,
       'status': status,
       'start_date': startDate,
       'end_date': endDate,
+      'total_budget': (totalBudget ?? 0).toDouble(),
       'created_at': DateTime.now().toIso8601String(),
     });
+    await _writeTable(_committeesKey, committees);
+    return id;
   }
 
   Future<int> updateCommittee({
@@ -154,37 +194,52 @@ class DatabaseHelper {
     required String status,
     String? startDate,
     String? endDate,
+    double? totalBudget,
   }) async {
-    final db = await database;
-    return db.update(
-      'committees',
-      {
-        'name': name,
-        'description': description,
-        'status': status,
-        'start_date': startDate,
-        'end_date': endDate,
-      },
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final committees = await _readTable(_committeesKey);
+    final index = committees.indexWhere((row) => row['id'] == id);
+    if (index == -1) {
+      return 0;
+    }
+
+    committees[index] = {
+      ...committees[index],
+      'name': name,
+      'description': description,
+      'status': status,
+      'start_date': startDate,
+      'end_date': endDate,
+      'total_budget': (totalBudget ?? 0).toDouble(),
+    };
+    await _writeTable(_committeesKey, committees);
+    return 1;
   }
 
   Future<int> deleteCommittee(int id) async {
-    final db = await database;
-    return db.delete('committees', where: 'id = ?', whereArgs: [id]);
+    final committees = await _readTable(_committeesKey);
+    final beforeCommitteesLength = committees.length;
+    committees.removeWhere((row) => row['id'] == id);
+    await _writeTable(_committeesKey, committees);
+
+    final members = await _readTable(_membersKey);
+    members.removeWhere((row) => row['committee_id'] == id);
+    await _writeTable(_membersKey, members);
+
+    final payments = await _readTable(_paymentsKey);
+    payments.removeWhere((row) => row['committee_id'] == id);
+    await _writeTable(_paymentsKey, payments);
+
+    return beforeCommitteesLength - committees.length;
   }
 
   Future<List<Map<String, Object?>>> getMembersByCommittee(
     int committeeId,
   ) async {
-    final db = await database;
-    return db.query(
-      'committee_members',
-      where: 'committee_id = ?',
-      whereArgs: [committeeId],
-      orderBy: 'id DESC',
-    );
+    final members = await _readTable(_membersKey);
+    final filtered =
+        members.where((row) => row['committee_id'] == committeeId).toList();
+    filtered.sort((a, b) => (b['id'] as int).compareTo(a['id'] as int));
+    return filtered;
   }
 
   Future<int> insertMember({
@@ -195,8 +250,10 @@ class DatabaseHelper {
     required String email,
     String? joinedAt,
   }) async {
-    final db = await database;
-    return db.insert('committee_members', {
+    final members = await _readTable(_membersKey);
+    final id = _nextId(members);
+    members.add({
+      'id': id,
       'committee_id': committeeId,
       'name': name,
       'role': role,
@@ -204,6 +261,8 @@ class DatabaseHelper {
       'email': email,
       'joined_at': joinedAt,
     });
+    await _writeTable(_membersKey, members);
+    return id;
   }
 
   Future<int> updateMember({
@@ -214,23 +273,93 @@ class DatabaseHelper {
     required String email,
     String? joinedAt,
   }) async {
-    final db = await database;
-    return db.update(
-      'committee_members',
-      {
-        'name': name,
-        'role': role,
-        'phone': phone,
-        'email': email,
-        'joined_at': joinedAt,
-      },
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    final members = await _readTable(_membersKey);
+    final index = members.indexWhere((row) => row['id'] == id);
+    if (index == -1) {
+      return 0;
+    }
+
+    members[index] = {
+      ...members[index],
+      'name': name,
+      'role': role,
+      'phone': phone,
+      'email': email,
+      'joined_at': joinedAt,
+    };
+    await _writeTable(_membersKey, members);
+    return 1;
   }
 
   Future<int> deleteMember(int id) async {
-    final db = await database;
-    return db.delete('committee_members', where: 'id = ?', whereArgs: [id]);
+    final members = await _readTable(_membersKey);
+    final beforeMembersLength = members.length;
+    members.removeWhere((row) => row['id'] == id);
+    await _writeTable(_membersKey, members);
+    return beforeMembersLength - members.length;
+  }
+
+  Future<List<Map<String, Object?>>> getPaymentsByCommittee(
+    int committeeId,
+  ) async {
+    final payments = await _readTable(_paymentsKey);
+    final filtered =
+        payments.where((row) => row['committee_id'] == committeeId).toList();
+    filtered.sort((a, b) => (b['id'] as int).compareTo(a['id'] as int));
+    return filtered;
+  }
+
+  Future<int> insertPayment({
+    required int committeeId,
+    required double amount,
+    required String paidOn,
+    required String method,
+    required String note,
+  }) async {
+    final payments = await _readTable(_paymentsKey);
+    final id = _nextId(payments);
+    payments.add({
+      'id': id,
+      'committee_id': committeeId,
+      'amount': amount,
+      'paid_on': paidOn,
+      'method': method,
+      'note': note,
+      'created_at': DateTime.now().toIso8601String(),
+    });
+    await _writeTable(_paymentsKey, payments);
+    return id;
+  }
+
+  Future<int> deletePayment(int id) async {
+    final payments = await _readTable(_paymentsKey);
+    final beforeLength = payments.length;
+    payments.removeWhere((row) => row['id'] == id);
+    await _writeTable(_paymentsKey, payments);
+    return beforeLength - payments.length;
+  }
+
+  Future<Map<String, double>> getCommitteePaymentSummary(
+    int committeeId,
+  ) async {
+    final committees = await _readTable(_committeesKey);
+    final committee = committees.firstWhere(
+      (row) => row['id'] == committeeId,
+      orElse: () => <String, Object?>{},
+    );
+    final totalBudget = _toDouble(committee['total_budget']);
+
+    final payments = await getPaymentsByCommittee(committeeId);
+    final totalReceived = payments.fold<double>(
+      0,
+      (sum, row) => sum + _toDouble(row['amount']),
+    );
+    final remaining =
+        (totalBudget - totalReceived).clamp(0, double.infinity).toDouble();
+    return {
+      'total': totalBudget,
+      'received': totalReceived,
+      'pending': remaining,
+    };
   }
 }

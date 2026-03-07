@@ -14,16 +14,11 @@ class CommitteeApp extends StatelessWidget {
         surface: Colors.white,
       ),
       scaffoldBackgroundColor: const Color(0xFFF5F7FB),
-      cardTheme: const CardThemeData(
-        elevation: 0,
-        margin: EdgeInsets.zero,
-      ),
+      cardTheme: const CardThemeData(elevation: 0, margin: EdgeInsets.zero),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
       ),
       appBarTheme: const AppBarTheme(centerTitle: false),
     );

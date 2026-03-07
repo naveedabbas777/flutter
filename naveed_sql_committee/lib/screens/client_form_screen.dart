@@ -73,9 +73,7 @@ class _ClientFormScreenState extends State<ClientFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Edit Client' : 'Add Client'),
-      ),
+      appBar: AppBar(title: Text(_isEdit ? 'Edit Client' : 'Add Client')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -89,8 +87,9 @@ class _ClientFormScreenState extends State<ClientFormScreen> {
                     children: [
                       TextFormField(
                         controller: _nameController,
-                        decoration:
-                            const InputDecoration(labelText: 'Client Name'),
+                        decoration: const InputDecoration(
+                          labelText: 'Client Name',
+                        ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Client name is required';

@@ -3,11 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
 
 class MemberFormScreen extends StatefulWidget {
-  const MemberFormScreen({
-    super.key,
-    required this.committeeId,
-    this.member,
-  });
+  const MemberFormScreen({super.key, required this.committeeId, this.member});
 
   final int committeeId;
   final Map<String, Object?>? member;
@@ -108,9 +104,7 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Edit Member' : 'Add Member'),
-      ),
+      appBar: AppBar(title: Text(_isEdit ? 'Edit Member' : 'Add Member')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -124,7 +118,9 @@ class _MemberFormScreenState extends State<MemberFormScreen> {
                     children: [
                       TextFormField(
                         controller: _nameController,
-                        decoration: const InputDecoration(labelText: 'Member Name'),
+                        decoration: const InputDecoration(
+                          labelText: 'Member Name',
+                        ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Member name is required';

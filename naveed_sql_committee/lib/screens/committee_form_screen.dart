@@ -20,6 +20,7 @@ class _CommitteeFormScreenState extends State<CommitteeFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _totalBudgetController = TextEditingController();
   final _startDateController = TextEditingController();
   final _endDateController = TextEditingController();
   final DatabaseHelper _databaseHelper = DatabaseHelper.instance;
@@ -35,12 +36,16 @@ class _CommitteeFormScreenState extends State<CommitteeFormScreen> {
     if (committee != null) {
       _nameController.text = (committee['name'] ?? '').toString();
       _descriptionController.text = (committee['description'] ?? '').toString();
+      _totalBudgetController.text =
+          (committee['total_budget'] ?? '0').toString();
       _startDateController.text = (committee['start_date'] ?? '').toString();
       _endDateController.text = (committee['end_date'] ?? '').toString();
       final status = (committee['status'] ?? '').toString();
       if (status.isNotEmpty) {
         _status = status;
       }
+    } else {
+      _totalBudgetController.text = '0';
     }
   }
 
@@ -48,6 +53,7 @@ class _CommitteeFormScreenState extends State<CommitteeFormScreen> {
   void dispose() {
     _nameController.dispose();
     _descriptionController.dispose();
+    _totalBudgetController.dispose();
     _startDateController.dispose();
     _endDateController.dispose();
     super.dispose();
@@ -77,6 +83,8 @@ class _CommitteeFormScreenState extends State<CommitteeFormScreen> {
 
     final name = _nameController.text.trim();
     final description = _descriptionController.text.trim();
+    final totalBudget =
+      double.tryParse(_totalBudgetController.text.trim()) ?? 0;
     final startDate = _startDateController.text.trim();
     final endDate = _endDateController.text.trim();
 
@@ -86,6 +94,7 @@ class _CommitteeFormScreenState extends State<CommitteeFormScreen> {
         name: name,
         description: description,
         status: _status,
+        totalBudget: totalBudget,
         startDate: startDate.isEmpty ? null : startDate,
         endDate: endDate.isEmpty ? null : endDate,
       );
@@ -95,6 +104,7 @@ class _CommitteeFormScreenState extends State<CommitteeFormScreen> {
         name: name,
         description: description,
         status: _status,
+        totalBudget: totalBudget,
         startDate: startDate.isEmpty ? null : startDate,
         endDate: endDate.isEmpty ? null : endDate,
       );
@@ -110,9 +120,7 @@ class _CommitteeFormScreenState extends State<CommitteeFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_isEdit ? 'Edit Committee' : 'Add Committee'),
-      ),
+      appBar: AppBar(title: Text(_isEdit ? 'Edit Committee' : 'Add Committee')),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -126,8 +134,9 @@ class _CommitteeFormScreenState extends State<CommitteeFormScreen> {
                     children: [
                       TextFormField(
                         controller: _nameController,
-                        decoration:
-                            const InputDecoration(labelText: 'Committee Name'),
+                        decoration: const InputDecoration(
+                          labelText: 'Committee Name',
+                        ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Committee name is required';
@@ -138,9 +147,27 @@ class _CommitteeFormScreenState extends State<CommitteeFormScreen> {
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _descriptionController,
-                        decoration:
-                            const InputDecoration(labelText: 'Description'),
+                        decoration: const InputDecoration(
+                          labelText: 'Description',
+                        ),
                         maxLines: 2,
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _totalBudgetController,
+                        decoration: const InputDecoration(
+                          labelText: 'Total Budget / Amount',
+                        ),
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        validator: (value) {
+                          final parsed = double.tryParse((value ?? '').trim());
+                          if (parsed == null || parsed < 0) {
+                            return 'Enter a valid non-negative amount';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
