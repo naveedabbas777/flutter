@@ -10,6 +10,7 @@ class DatabaseHelper {
   static const String _committeesKey = 'db_committees';
   static const String _membersKey = 'db_members';
   static const String _paymentsKey = 'db_payments';
+  static const String _messagesKey = 'db_messages';
 
   Future<SharedPreferences> get _preferences async {
     return SharedPreferences.getInstance();
@@ -361,5 +362,52 @@ class DatabaseHelper {
       'received': totalReceived,
       'pending': remaining,
     };
+  }
+
+  Future<List<Map<String, Object?>>> getMessages() async {
+    final messages = await _readTable(_messagesKey);
+    messages.sort((a, b) => (b['id'] as int).compareTo(a['id'] as int));
+    return messages;
+  }
+
+  Future<int> insertMessage({
+    required String sender,
+    required String recipient,
+    required String subject,
+    required String message,
+    String? sentAt,
+  }) async {
+    final messages = await _readTable(_messagesKey);
+    final id = _nextId(messages);
+    messages.add({
+      'id': id,
+      'sender': sender,
+      'recipient': recipient,
+      'subject': subject,
+      'message': message,
+      'sent_at': sentAt ?? DateTime.now().toIso8601String(),
+      'is_read': false,
+    });
+    await _writeTable(_messagesKey, messages);
+    return id;
+  }
+
+  Future<int> markMessageAsRead(int id) async {
+    final messages = await _readTable(_messagesKey);
+    final index = messages.indexWhere((row) => row['id'] == id);
+    if (index == -1) {
+      return 0;
+    }
+    messages[index]['is_read'] = true;
+    await _writeTable(_messagesKey, messages);
+    return 1;
+  }
+
+  Future<int> deleteMessage(int id) async {
+    final messages = await _readTable(_messagesKey);
+    final beforeLength = messages.length;
+    messages.removeWhere((row) => row['id'] == id);
+    await _writeTable(_messagesKey, messages);
+    return beforeLength - messages.length;
   }
 }

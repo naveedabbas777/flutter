@@ -191,9 +191,15 @@ class _CommitteeDashboardScreenState extends State<CommitteeDashboardScreen> {
     }
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text('${widget.committeeName} Dashboard'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadDashboard,
+            tooltip: 'Refresh',
+          ),
           TextButton.icon(
             onPressed: () async {
               await Navigator.of(context).push(
@@ -218,10 +224,23 @@ class _CommitteeDashboardScreenState extends State<CommitteeDashboardScreen> {
         icon: const Icon(Icons.add_card_outlined),
         label: const Text('Add Payment'),
       ),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFE8F5E8), // Light green
+              Color(0xFFF3E5F5), // Light purple
+              Color(0xFFFFF3E0), // Light orange
+            ],
+            stops: [0.0, 0.5, 1.0],
+          ),
+        ),
+        child:
+            _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
                 onRefresh: _loadDashboard,
                 child: ListView(
                   padding: const EdgeInsets.all(16),
@@ -375,6 +394,7 @@ class _CommitteeDashboardScreenState extends State<CommitteeDashboardScreen> {
                   ],
                 ),
               ),
+            ),
     );
   }
 }

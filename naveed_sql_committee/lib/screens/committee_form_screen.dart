@@ -3,13 +3,9 @@ import 'package:flutter/material.dart';
 import '../data/database_helper.dart';
 
 class CommitteeFormScreen extends StatefulWidget {
-  const CommitteeFormScreen({
-    super.key,
-    required this.clientId,
-    this.committee,
-  });
+  const CommitteeFormScreen({super.key, this.clientId, this.committee});
 
-  final int clientId;
+  final int? clientId;
   final Map<String, Object?>? committee;
 
   @override
@@ -26,12 +22,15 @@ class _CommitteeFormScreenState extends State<CommitteeFormScreen> {
   final DatabaseHelper _databaseHelper = DatabaseHelper.instance;
 
   String _status = 'Active';
+  List<Map<String, Object?>> _clients = [];
+  int? _selectedClientId;
 
   bool get _isEdit => widget.committee != null;
 
   @override
   void initState() {
     super.initState();
+    _loadClients();
     final committee = widget.committee;
     if (committee != null) {
       _nameController.text = (committee['name'] ?? '').toString();
@@ -44,9 +43,18 @@ class _CommitteeFormScreenState extends State<CommitteeFormScreen> {
       if (status.isNotEmpty) {
         _status = status;
       }
+      _selectedClientId = committee['client_id'] as int?;
     } else {
       _totalBudgetController.text = '0';
+      _selectedClientId = widget.clientId;
     }
+  }
+
+  Future<void> _loadClients() async {
+    final clients = await _databaseHelper.getClients();
+    setState(() {
+      _clients = clients;
+    });
   }
 
   @override
@@ -84,7 +92,7 @@ class _CommitteeFormScreenState extends State<CommitteeFormScreen> {
     final name = _nameController.text.trim();
     final description = _descriptionController.text.trim();
     final totalBudget =
-      double.tryParse(_totalBudgetController.text.trim()) ?? 0;
+        double.tryParse(_totalBudgetController.text.trim()) ?? 0;
     final startDate = _startDateController.text.trim();
     final endDate = _endDateController.text.trim();
 
@@ -100,7 +108,7 @@ class _CommitteeFormScreenState extends State<CommitteeFormScreen> {
       );
     } else {
       await _databaseHelper.insertCommittee(
-        clientId: widget.clientId,
+        clientId: _selectedClientId!,
         name: name,
         description: description,
         status: _status,
@@ -151,6 +159,31 @@ class _CommitteeFormScreenState extends State<CommitteeFormScreen> {
                           labelText: 'Description',
                         ),
                         maxLines: 2,
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<int>(
+                        value: _selectedClientId,
+                        decoration: const InputDecoration(labelText: 'Client'),
+                        items:
+                            _clients.map((client) {
+                              final id = client['id'] as int;
+                              final name = client['name'] as String;
+                              return DropdownMenuItem(
+                                value: id,
+                                child: Text(name),
+                              );
+                            }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            _selectedClientId = value;
+                          });
+                        },
+                        validator: (value) {
+                          if (value == null) {
+                            return 'Please select a client';
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
