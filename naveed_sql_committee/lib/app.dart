@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'screens/clients_screen.dart';
 import 'screens/login_screen.dart';
 
 class CommitteeApp extends StatelessWidget {

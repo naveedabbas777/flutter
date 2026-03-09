@@ -20,9 +20,6 @@ class _CommitteesScreenState extends State<CommitteesScreen> {
   bool _isLoading = false;
   List<Map<String, Object?>> _committees = [];
   Map<int, String> _clientNames = {};
-  List<Map<String, Object?>> _members = [];
-  List<Map<String, Object?>> _payments = [];
-  Map<int, String> _memberNames = {};
   String _searchQuery = '';
   String _statusFilter = 'all';
   String _paymentFilter = 'all'; // all, paid, pending
@@ -55,19 +52,11 @@ class _CommitteesScreenState extends State<CommitteesScreen> {
     final committees = await _databaseHelper.getAllCommittees();
     final clients = await _databaseHelper.getClients();
     final members = await _databaseHelper.getAllMembers();
-    final payments = await _databaseHelper.getAllPayments();
     final clientNames = <int, String>{};
     for (final client in clients) {
       final id = _toInt(client['id']);
       final name = (client['name'] ?? '').toString();
       clientNames[id] = name;
-    }
-
-    final memberNames = <int, String>{};
-    for (final member in members) {
-      final id = _toInt(member['id']);
-      final name = (member['name'] ?? '').toString();
-      memberNames[id] = name;
     }
 
     final memberCountByCommittee = <int, int>{};
@@ -94,9 +83,6 @@ class _CommitteesScreenState extends State<CommitteesScreen> {
     setState(() {
       _committees = committeesWithCount;
       _clientNames = clientNames;
-      _members = members;
-      _payments = payments;
-      _memberNames = memberNames;
       _isLoading = false;
     });
   }

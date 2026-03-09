@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,6 +12,7 @@ class DatabaseHelper {
   static const String _membersKey = 'db_members';
   static const String _paymentsKey = 'db_payments';
   static const String _messagesKey = 'db_messages';
+  static const String _drawsKey = 'db_draws';
 
   Future<SharedPreferences> get _preferences async {
     return SharedPreferences.getInstance();
@@ -230,6 +232,10 @@ class DatabaseHelper {
     payments.removeWhere((row) => row['committee_id'] == id);
     await _writeTable(_paymentsKey, payments);
 
+    final draws = await _readTable(_drawsKey);
+    draws.removeWhere((row) => row['committee_id'] == id);
+    await _writeTable(_drawsKey, draws);
+
     return beforeCommitteesLength - committees.length;
   }
 
@@ -316,12 +322,14 @@ class DatabaseHelper {
     required String paidOn,
     required String method,
     required String note,
+    int? memberId,
   }) async {
     final payments = await _readTable(_paymentsKey);
     final id = _nextId(payments);
     payments.add({
       'id': id,
       'committee_id': committeeId,
+      'member_id': memberId,
       'amount': amount,
       'paid_on': paidOn,
       'method': method,
@@ -330,6 +338,16 @@ class DatabaseHelper {
     });
     await _writeTable(_paymentsKey, payments);
     return id;
+  }
+
+  Future<List<Map<String, Object?>>> getPaymentsByMember(
+    int memberId,
+  ) async {
+    final payments = await _readTable(_paymentsKey);
+    final filtered =
+        payments.where((row) => row['member_id'] == memberId).toList();
+    filtered.sort((a, b) => (b['id'] as int).compareTo(a['id'] as int));
+    return filtered;
   }
 
   Future<int> deletePayment(int id) async {
@@ -409,5 +427,67 @@ class DatabaseHelper {
     messages.removeWhere((row) => row['id'] == id);
     await _writeTable(_messagesKey, messages);
     return beforeLength - messages.length;
+  }
+
+  // ─── Lucky Draws ──────────────────────────────────────────────────
+
+  Future<List<Map<String, Object?>>> getDrawsByCommittee(
+    int committeeId,
+  ) async {
+    final draws = await _readTable(_drawsKey);
+    final filtered =
+        draws.where((row) => row['committee_id'] == committeeId).toList();
+    filtered.sort((a, b) =>
+        (b['round_number'] as int).compareTo(a['round_number'] as int));
+    return filtered;
+  }
+
+  Future<int> insertDraw({
+    required int committeeId,
+    required int roundNumber,
+    required int winnerMemberId,
+    required double totalAmount,
+  }) async {
+    final draws = await _readTable(_drawsKey);
+    final id = _nextId(draws);
+    draws.add({
+      'id': id,
+      'committee_id': committeeId,
+      'round_number': roundNumber,
+      'winner_member_id': winnerMemberId,
+      'total_amount': totalAmount,
+      'drawn_at': DateTime.now().toIso8601String(),
+    });
+    await _writeTable(_drawsKey, draws);
+    return id;
+  }
+
+  Future<int> deleteDraw(int id) async {
+    final draws = await _readTable(_drawsKey);
+    final beforeLength = draws.length;
+    draws.removeWhere((row) => row['id'] == id);
+    await _writeTable(_drawsKey, draws);
+    return beforeLength - draws.length;
+  }
+
+  /// Picks a random member who hasn't won yet in this committee.
+  /// Returns null if all members have already won or no members exist.
+  Future<Map<String, Object?>?> pickLuckyDrawWinner(
+    int committeeId,
+  ) async {
+    final members = await getMembersByCommittee(committeeId);
+    if (members.isEmpty) return null;
+
+    final draws = await getDrawsByCommittee(committeeId);
+    final winnerIds =
+        draws.map((d) => d['winner_member_id'] as int).toSet();
+
+    final eligible = members
+        .where((m) => !winnerIds.contains(m['id'] as int))
+        .toList();
+    if (eligible.isEmpty) return null;
+
+    final random = Random();
+    return eligible[random.nextInt(eligible.length)];
   }
 }

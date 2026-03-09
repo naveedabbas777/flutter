@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../data/database_helper.dart';
 import 'admin_dashboard_screen.dart';
-import 'client_committees_screen.dart';
 import 'client_form_screen.dart';
 
 class ClientsScreen extends StatefulWidget {
