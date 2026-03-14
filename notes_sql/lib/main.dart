@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
-import 'package:path_provider/path_provider.dart';
+
+import 'storage/task_model.dart';
+import 'storage/task_store.dart';
 
 void main() {
   runApp(const TaskManagementApp());
@@ -28,61 +28,43 @@ class TaskListScreen extends StatefulWidget {
 }
 
 class _TaskListScreenState extends State<TaskListScreen> {
-  late Database _database;
-  List<Map<String, dynamic>> _tasks = [];
+  final TaskStore _taskStore = createTaskStore();
+  List<TaskItem> _tasks = <TaskItem>[];
 
   @override
   void initState() {
     super.initState();
-    _initDatabase();
+    _initStore();
   }
 
-  Future<void> _initDatabase() async {
-    final directory = await getApplicationDocumentsDirectory();
-    final path = join(directory.path, 'tasks.db');
-    _database = await openDatabase(
-      path,
-      version: 1,
-      onCreate: (db, version) {
-        db.execute(
-          'CREATE TABLE tasks(id INTEGER PRIMARY KEY, name TEXT, description TEXT)',
-        );
-      },
-    );
-    _loadTasks();
+  Future<void> _initStore() async {
+    await _taskStore.init();
+    await _loadTasks();
   }
 
   Future<void> _loadTasks() async {
-    final List<Map<String, dynamic>> tasks = await _database.query(
-      'tasks',
-      orderBy: 'id DESC',
-    );
+    final List<TaskItem> tasks = await _taskStore.getTasks();
+    if (!mounted) {
+      return;
+    }
     setState(() {
       _tasks = tasks;
     });
   }
 
   Future<void> _addTask(String name, String description) async {
-    await _database.insert('tasks', {
-      'name': name,
-      'description': description,
-    }, conflictAlgorithm: ConflictAlgorithm.replace);
-    _loadTasks();
+    await _taskStore.addTask(name, description);
+    await _loadTasks();
   }
 
   Future<void> _updateTask(int id, String name, String description) async {
-    await _database.update(
-      'tasks',
-      {'name': name, 'description': description},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    _loadTasks();
+    await _taskStore.updateTask(id, name, description);
+    await _loadTasks();
   }
 
   Future<void> _deleteTask(int id) async {
-    await _database.delete('tasks', where: 'id = ?', whereArgs: [id]);
-    _loadTasks();
+    await _taskStore.deleteTask(id);
+    await _loadTasks();
   }
 
   void _showTaskDialog(
@@ -178,13 +160,14 @@ class _TaskListScreenState extends State<TaskListScreen> {
   }
 
   Future<void> _addNotes(int taskId, String notes) async {
-    await _database.update(
-      'tasks',
-      {'description': notes},
-      where: 'id = ?',
-      whereArgs: [taskId],
-    );
-    _loadTasks();
+    await _taskStore.addNotes(taskId, notes);
+    await _loadTasks();
+  }
+
+  @override
+  void dispose() {
+    _taskStore.dispose();
+    super.dispose();
   }
 
   @override
@@ -194,12 +177,12 @@ class _TaskListScreenState extends State<TaskListScreen> {
       body: ListView.builder(
         itemCount: _tasks.length,
         itemBuilder: (context, index) {
-          final task = _tasks[index];
+          final TaskItem task = _tasks[index];
           return Card(
             margin: const EdgeInsets.all(8),
             child: ListTile(
-              title: Text(task['name']),
-              subtitle: Text(task['description']),
+              title: Text(task.name),
+              subtitle: Text(task.description),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -208,22 +191,22 @@ class _TaskListScreenState extends State<TaskListScreen> {
                     onPressed: () {
                       _showTaskDialog(
                         context,
-                        id: task['id'],
-                        name: task['name'],
-                        description: task['description'],
+                        id: task.id,
+                        name: task.name,
+                        description: task.description,
                       );
                     },
                   ),
                   IconButton(
                     icon: const Icon(Icons.delete),
                     onPressed: () {
-                      _deleteTask(task['id']);
+                      _deleteTask(task.id);
                     },
                   ),
                   IconButton(
                     icon: const Icon(Icons.note_add),
                     onPressed: () {
-                      _showNotesDialog(context, task['id']);
+                      _showNotesDialog(context, task.id);
                     },
                   ),
                 ],
